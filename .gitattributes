@@ -1,0 +1,12 @@
+# Set the default behavior, in case people don't have core.autocrlf set.
+# Assume that git version > 2.10. see: https://stackoverflow.com/a/40977008
+* text=auto eol=lf
+
+# Denote all files that are truly binary and should not be modified.
+*.png binary
+*.jpg binary
+*.pdf binary
+*.gif binary
+*.ico binary
+*.7z binary
+*.cast text eol=lf

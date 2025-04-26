@@ -1,0 +1,53 @@
+{
+  # Enable all markdownlint rules
+  "default": true,
+
+  # Allow only # Header style
+  "MD003": {"style": "atx"},
+
+  # Allow only - Header style
+  "MD004": {"style": "dash"},
+
+  # Set list indent level to 4 which Python-Markdown requires
+  "MD007": { "indent": 2 },
+
+  # Max line length is 80, exceptions: code blocks and tables
+  "MD013": { "line_length": 80, "code_blocks": false, "tables": false },
+
+  # MD014 - Dollar signs used before commands without showing output
+  "MD014": false,
+
+  # Allowed for non-sibling headings. See: https://github.com/DavidAnson/markdownlint/blob/master/doc/Rules.md#md024
+  "MD024": { "siblings_only": true },
+
+  # MD025 - Allow multiple h1 headers (used for Jekyll)
+  "MD025": false,
+
+  # Allow ! and ?
+  "MD026": { "punctuation": ".,;:" },
+
+  # Set Ordered list item prefix to "ordered" (use 1. 2. 3. not 1. 1. 1.)
+  "MD029": { "style": "ordered" },
+
+  # None
+  # If needed see: For YouTube videos. See: https://github.com/DavidAnson/markdownlint/blob/2d8122a3bec9d33c55da5620d07901842fb9c92d/test/inline_html-allowed_elements.json
+  "MD033": { "allowed_elements": [""] },
+
+  # hr is ---
+  "MD035": { "style": "---" },
+
+  # MD036 - Emphasis used instead of a heading
+  "MD036": false,
+
+  # Allow fenced ``` code block style (with MD048)
+  "MD046": { "style": "fenced"},
+
+  # ``` is code block style
+  "MD048": { "style": "backtick"},
+
+  # We use * * for emphasis
+  "MD049": { "style": "asterisk"},
+
+  # We use ** ** for strong
+  "MD050": { "style": "asterisk"}
+}

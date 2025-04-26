@@ -1,0 +1,11 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions" # See documentation for possible values
+    directory: "/" # Location of package manifests
+    schedule:
+      interval: monthly
+      day: "saturday"
+      timezone: "Europe/Istanbul"
+      time: "07:00"
+    assignees:
+      - "alperyazar"

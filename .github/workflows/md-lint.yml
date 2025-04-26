@@ -1,0 +1,18 @@
+name: Lint markdown files
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+# Ref: https://github.com/igorshubovych/markdownlint-cli
+  markdown-lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Lint markdown files (with Docker)
+      run: |
+        docker run -v $PWD:/workdir ghcr.io/igorshubovych/markdownlint-cli:latest "**/*.md"
