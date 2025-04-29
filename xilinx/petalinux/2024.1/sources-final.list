@@ -1,0 +1,4 @@
+#ignore this file will be ignored by replace_sources.sh because it begins with #ignore
+
+deb http://archive.ubuntu.com/ubuntu/ jammy main restricted universe
+deb http://archive.ubuntu.com/ubuntu/ jammy-updates main restricted universe
