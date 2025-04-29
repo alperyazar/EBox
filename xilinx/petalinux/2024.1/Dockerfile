@@ -41,7 +41,7 @@ RUN chmod +x /opt/EBox/bin/replace_sources.sh && \
     /opt/EBox/bin/replace_sources.sh /opt/EBox/sources-build.list
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV DEBCONF_NONINTERACTIVE_SEEN=true;
+ENV DEBCONF_NONINTERACTIVE_SEEN=true
 
 # Package list is taken from plnx-env-setup.sh, version 2025-03-26
 RUN dpkg --add-architecture i386 && apt update && apt install -y \
@@ -58,6 +58,9 @@ ENV LC_ALL=en_US.UTF-8
 
 # Package list is taken from plnx-env-setup.sh, version 2025-03-26
 # + packages learned from installation and runtime errors, internet etc.
+# ----------------------------------------------------------------------
+# [ERROR] nslookup is required but not found in the path
+# https://ayazar.dev/xilinx/ubuntu-2004-petalinux-20222-kurulumu.html
 ARG COMMON_PACKAGES="\
   iproute2 \
   gawk \
@@ -106,7 +109,9 @@ ARG COMMON_PACKAGES="\
   pylint \
   rsync \
   bc \
-  lsb-release"
+  lsb-release \
+  libtinfo5 \
+  dnsutils"
 
 RUN apt install -y $COMMON_PACKAGES && \
     echo $COMMON_PACKAGES > /opt/EBox/common_packages.txt
@@ -203,16 +208,17 @@ RUN /opt/EBox/bin/replace_sources.sh /opt/EBox/sources-final.list
 ARG EBOX_OCI_TITLE="EBox - PetaLinux 2024.1"
 ARG EBOX_OCI_DESCRIPTION="PetaLinux 2024.1 in a container, the EBox project"
 ARG EBOX_OCI_VERSION="19700101-0"
-ARG EBOX_OCI_REVISION="20250429-0-test"
+ARG EBOX_OCI_REVISION="20250429-1-PR"
 ARG EBOX_OCI_LICENSE="MIT"
 ARG EBOX_OCI_AUTHORS="The EBox Authors"
 
-LABEL org.opencontainers.image.title="${OCI_TITLE}" \
-      org.opencontainers.image.description="${OCI_DESCRIPTION}" \
-      org.opencontainers.image.version="${OCI_VERSION}" \
-      org.opencontainers.image.revision="${OCI_REVISION}" \
-      org.opencontainers.image.license="${OCI_LICENSE}" \
-      org.opencontainers.image.authors="${OCI_AUTHORS}"
+LABEL org.opencontainers.image.title="${EBOX_OCI_TITLE}" \
+      org.opencontainers.image.description="${EBOX_OCI_DESCRIPTION}" \
+      org.opencontainers.image.version="${EBOX_OCI_VERSION}" \
+      org.opencontainers.image.revision="${EBOX_OCI_REVISION}" \
+      org.opencontainers.image.license="${EBOX_OCI_LICENSE}" \
+      org.opencontainers.image.authors="${EBOX_OCI_AUTHORS}" \
+      org.opencontainers.image.ref.name="ebox-xilinx-petalinux-2024-1"
 
 ENV EBOX_OCI_TITLE=${EBOX_OCI_TITLE}
 ENV EBOX_OCI_DESCRIPTION=${EBOX_OCI_DESCRIPTION}
