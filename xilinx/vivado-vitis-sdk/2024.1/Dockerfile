@@ -196,16 +196,17 @@ RUN /opt/EBox/bin/replace_sources.sh /opt/EBox/sources-final.list
 ARG EBOX_OCI_TITLE="EBox - Vivado Vitis 2024.1"
 ARG EBOX_OCI_DESCRIPTION="Vivado Vitis 2024.1 in a container, the EBox project"
 ARG EBOX_OCI_VERSION="19700101-0"
-ARG EBOX_OCI_REVISION="20250426-0"
+ARG EBOX_OCI_REVISION="20250429-0"
 ARG EBOX_OCI_LICENSE="MIT"
 ARG EBOX_OCI_AUTHORS="The EBox Authors"
 
-LABEL org.opencontainers.image.title="${OCI_TITLE}" \
-      org.opencontainers.image.description="${OCI_DESCRIPTION}" \
-      org.opencontainers.image.version="${OCI_VERSION}" \
-      org.opencontainers.image.revision="${OCI_REVISION}" \
-      org.opencontainers.image.license="${OCI_LICENSE}" \
-      org.opencontainers.image.authors="${OCI_AUTHORS}"
+LABEL org.opencontainers.image.title="${EBOX_OCI_TITLE}" \
+      org.opencontainers.image.description="${EBOX_OCI_DESCRIPTION}" \
+      org.opencontainers.image.version="${EBOX_OCI_VERSION}" \
+      org.opencontainers.image.revision="${EBOX_OCI_REVISION}" \
+      org.opencontainers.image.license="${EBOX_OCI_LICENSE}" \
+      org.opencontainers.image.authors="${EBOX_OCI_AUTHORS}" \
+      org.opencontainers.image.ref.name="ebox-xilinx-vivado-2024-1"
 
 ENV EBOX_OCI_TITLE=${EBOX_OCI_TITLE}
 ENV EBOX_OCI_DESCRIPTION=${EBOX_OCI_DESCRIPTION}
