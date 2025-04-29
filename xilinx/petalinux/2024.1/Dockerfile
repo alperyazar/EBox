@@ -35,10 +35,10 @@ FROM ubuntu:22.04 AS base
 
 RUN mkdir -p /opt/EBox
 
-COPY sources-stage-1.list /opt/EBox/sources-stage-1.list
+COPY sources-build.list /opt/EBox/sources-build.list
 COPY replace_sources.sh /opt/EBox/bin/replace_sources.sh
 RUN chmod +x /opt/EBox/bin/replace_sources.sh && \
-    /opt/EBox/bin/replace_sources.sh /opt/EBox/sources-stage-1.list
+    /opt/EBox/bin/replace_sources.sh /opt/EBox/sources-build.list
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV DEBCONF_NONINTERACTIVE_SEEN=true;
@@ -123,6 +123,9 @@ RUN groupadd -g 888 ebox && \
     echo "eboxinstall:eboxinstall" | chpasswd && \
     chown -R eboxinstall:eboxinstall /home/eboxinstall
 
+# Save environment variables used during the build
+RUN printenv > /opt/EBox/env-stage-1
+
 # ------------------------------------------------------------------------------
 ################# Beginning of the installation image ##################
 # ------------------------------------------------------------------------------
@@ -165,15 +168,18 @@ RUN sed -i '/^echo "Use PgUp\/PgDn to navigate the license viewer, and press '\'
 RUN /tmp/$INSTALLATION_FILE \
     -d /opt/Xilinx/PetaLinux/2024.1
 
+USER root
+WORKDIR /root
+
+# Save environment variables used during the build
+RUN printenv > /opt/EBox/env-stage-2
+
 # ------------------------------------------------------------------------------
 ################# Beginning of the final image ##################
 # ------------------------------------------------------------------------------
 
 # Stage 3: Final
 FROM base AS final
-
-USER root
-WORKDIR /root
 
 COPY --from=installer /opt/Xilinx /opt/Xilinx
 COPY --from=installer /opt/EBox /opt/EBox
@@ -182,3 +188,41 @@ COPY --from=installer /opt/EBox /opt/EBox
 RUN echo "dash dash/sh boolean false" | debconf-set-selections && \
     DEBIAN_FRONTEND=noninteractive dpkg-reconfigure dash && \
     echo "source /opt/Xilinx/PetaLinux/2024.1/settings.sh" >> /home/ebox/.bashrc
+
+# In-file extra packages
+ARG EXTRA_PACKAGES=""
+RUN apt update && apt install -y $EXTRA_PACKAGES
+
+# Allow user to append extra packages via --build-arg
+ARG CMD_EXTRA_PACKAGES=""
+RUN apt update && apt install -y $CMD_EXTRA_PACKAGES
+
+COPY sources-final.list /opt/EBox/sources-final.list
+RUN /opt/EBox/bin/replace_sources.sh /opt/EBox/sources-final.list
+
+ARG EBOX_OCI_TITLE="EBox - PetaLinux 2024.1"
+ARG EBOX_OCI_DESCRIPTION="PetaLinux 2024.1 in a container, the EBox project"
+ARG EBOX_OCI_VERSION="19700101-0"
+ARG EBOX_OCI_REVISION="20250429-0-test"
+ARG EBOX_OCI_LICENSE="MIT"
+ARG EBOX_OCI_AUTHORS="The EBox Authors"
+
+LABEL org.opencontainers.image.title="${OCI_TITLE}" \
+      org.opencontainers.image.description="${OCI_DESCRIPTION}" \
+      org.opencontainers.image.version="${OCI_VERSION}" \
+      org.opencontainers.image.revision="${OCI_REVISION}" \
+      org.opencontainers.image.license="${OCI_LICENSE}" \
+      org.opencontainers.image.authors="${OCI_AUTHORS}"
+
+ENV EBOX_OCI_TITLE=${EBOX_OCI_TITLE}
+ENV EBOX_OCI_DESCRIPTION=${EBOX_OCI_DESCRIPTION}
+ENV EBOX_OCI_VERSION=${EBOX_OCI_VERSION}
+ENV EBOX_OCI_REVISION=${EBOX_OCI_REVISION}
+ENV EBOX_OCI_LICENSE=${EBOX_OCI_LICENSE}
+ENV EBOX_OCI_AUTHORS=${EBOX_OCI_AUTHORS}
+
+RUN printenv > /opt/EBox/env-stage-3 && cat /opt/EBox/env-stage-1 /opt/EBox/env-stage-2 /opt/EBox/env-stage-3 > /opt/EBox/env
+
+USER root
+WORKDIR /root
+CMD [ "/bin/bash" ]
