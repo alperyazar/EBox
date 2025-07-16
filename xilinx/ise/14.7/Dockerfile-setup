@@ -60,7 +60,7 @@ RUN mkdir -p /tmp/installer && \
 # Get installation config
 RUN mkdir -p /opt/EBox
 ARG VIVADO_BATCH_INSTALL_CONFIG_FILE="install_config.txt"
-COPY $VIVADO_BATCH_INSTALL_CONFIG_FILE /opt/EBox/install_config.txt
+# COPY $VIVADO_BATCH_INSTALL_CONFIG_FILE /opt/EBox/install_config.txt
 COPY sources-stage-1.list /opt/EBox/sources-stage-1.list
 COPY replace_sources.sh /opt/EBox/bin/replace_sources.sh
 RUN chmod +x /opt/EBox/bin/replace_sources.sh && \
