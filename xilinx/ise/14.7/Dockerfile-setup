@@ -55,7 +55,7 @@ RUN if [ "$SKIP_MD5" != "1" ]; then \
 
 # Extract Vivado
 RUN mkdir -p /tmp/installer && \
-    tar -xvzf /tmp/$VIVADO_INSTALLATION_FILE -C /tmp/installer --strip-components=1
+    tar -xvf /tmp/$VIVADO_INSTALLATION_FILE -C /tmp/installer --strip-components=1
 
 # Get installation config
 RUN mkdir -p /opt/EBox
@@ -72,7 +72,15 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Error: xz is required for installation of this SDK, please install it first
 # The SDK needs a python installed /opt/Xilinx/Vivado/2024.1/bin/rdiArgs.sh:
 # warning: setlocale: LC_ALL: cannot change locale (en_US.UTF-8)
-ARG COMMON_PACKAGES=""
+ARG COMMON_PACKAGES="\
+    locales \
+    libncurses5 \
+    xvfb \
+    libglib2.0-0 \
+    libxi6 \
+    libxrender1 \
+    libxrandr2 \
+    libfontconfig1"
 RUN apt update && apt install -y $COMMON_PACKAGES && \
     echo $COMMON_PACKAGES > /opt/EBox/common_packages.txt
 
