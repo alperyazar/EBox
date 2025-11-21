@@ -116,17 +116,13 @@ ARG COMMON_PACKAGES="\
 RUN apt install -y $COMMON_PACKAGES && \
     echo $COMMON_PACKAGES > /opt/EBox/common_packages.txt
 
-# Create necessary users for install and run-time
+# Create necessary users
 RUN groupadd -g 888 ebox && \
     adduser --uid 888 --gid 888 --shell /bin/bash ebox && \
     adduser ebox sudo && \
     echo 'ebox ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers && \
     echo "ebox:ebox" | chpasswd && \
-    chown -R ebox:ebox /home/ebox && \
-    groupadd -g 887 eboxinstall && \
-    adduser --uid 887 --gid 887 --shell /bin/bash eboxinstall && \
-    echo "eboxinstall:eboxinstall" | chpasswd && \
-    chown -R eboxinstall:eboxinstall /home/eboxinstall
+    chown -R ebox:ebox /home/ebox
 
 # Save environment variables used during the build
 RUN printenv > /opt/EBox/env-stage-1
@@ -159,13 +155,13 @@ RUN if [ "$SKIP_MD5" != "1" ]; then \
     fi
 
 # Install
-RUN chown eboxinstall:eboxinstall /tmp/$INSTALLATION_FILE && \
+RUN chown ebox:ebox /tmp/$INSTALLATION_FILE && \
     chmod u+x /tmp/$INSTALLATION_FILE && \
     mkdir -p /opt/Xilinx/PetaLinux && \
-    chown eboxinstall:eboxinstall /opt/Xilinx/PetaLinux
+    chown ebox:ebox /opt/Xilinx/PetaLinux
 
-USER eboxinstall
-WORKDIR /home/eboxinstall
+USER ebox
+WORKDIR /home/ebox
 
 # Automatically accept the license
 RUN sed -i '/^echo "Use PgUp\/PgDn to navigate the license viewer, and press '\''q'\'' to close"/a answer="y"' /tmp/$INSTALLATION_FILE
@@ -175,6 +171,8 @@ RUN /tmp/$INSTALLATION_FILE \
 
 USER root
 WORKDIR /root
+
+RUN chmod -R a-w /opt/Xilinx/PetaLinux/2024.1
 
 # Save environment variables used during the build
 RUN printenv > /opt/EBox/env-stage-2
@@ -208,7 +206,7 @@ RUN /opt/EBox/bin/replace_sources.sh /opt/EBox/sources-final.list
 ARG EBOX_OCI_TITLE="EBox - PetaLinux 2024.1"
 ARG EBOX_OCI_DESCRIPTION="PetaLinux 2024.1 in a container, the EBox project"
 ARG EBOX_OCI_VERSION="19700101-0"
-ARG EBOX_OCI_REVISION="20251121-0"
+ARG EBOX_OCI_REVISION="202511121-0"
 ARG EBOX_OCI_LICENSE="MIT"
 ARG EBOX_OCI_AUTHORS="The EBox Authors"
 
