@@ -104,4 +104,3 @@ cd "$WS_PATH"
 export HOME="$HOME_DIR"
 
 exec gosu "$USERNAME" "$@"
-

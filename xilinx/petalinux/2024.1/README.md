@@ -26,16 +26,6 @@ To test:
 sudo docker run --rm -it --user ebox petalinux:2024.1-$TAG
 ```
 
-with X11
-
-```shell
-sudo docker run --rm -it \
-  -v /tmp/.X11-unix:/tmp/.X11-unix:ro \
-  -e DISPLAY=${DISPLAY} \
-  -u ebox \
-  petalinux:2024.1-$TAG
-```
-
 ----
 
 ```text

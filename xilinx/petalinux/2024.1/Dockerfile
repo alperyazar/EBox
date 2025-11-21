@@ -200,6 +200,11 @@ RUN apt update && apt install -y $EXTRA_PACKAGES
 ARG CMD_EXTRA_PACKAGES=""
 RUN apt update && apt install -y $CMD_EXTRA_PACKAGES
 
+# Set the default command to launch when starting the container
+RUN apt update && apt install -y gosu
+COPY entrypoint.sh /opt/EBox/entrypoint.sh
+RUN chmod +x /opt/EBox/entrypoint.sh
+
 COPY sources-final.list /opt/EBox/sources-final.list
 RUN /opt/EBox/bin/replace_sources.sh /opt/EBox/sources-final.list
 
@@ -230,3 +235,4 @@ RUN printenv > /opt/EBox/env-stage-3 && cat /opt/EBox/env-stage-1 /opt/EBox/env-
 USER root
 WORKDIR /root
 CMD [ "/bin/bash" ]
+ENTRYPOINT ["/opt/EBox/entrypoint.sh"]
