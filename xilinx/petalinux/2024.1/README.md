@@ -4,6 +4,38 @@
 
 Similar to [Vivado/Vitis 2024.1](../../vivado-vitis-sdk/2024.1/README.md)
 
+## Building the image
+
+```bash
+# Define a version tag
+TAG=YYYYMMDD-<Count>  # Change this to match the current date and build count like 20250424-1
+
+# Build the Docker image with tagging and log output
+sudo docker build \
+  -t petalinux:2024.1-$TAG \
+  --build-arg EBOX_OCI_VERSION="$TAG" \
+  --progress=plain . \
+  2>&1 | tee build.log
+```
+
+## Runing the image
+
+To test:
+
+```shell
+sudo docker run --rm -it --user ebox petalinux:2024.1-$TAG
+```
+
+with X11
+
+```shell
+sudo docker run --rm -it \
+  -v /tmp/.X11-unix:/tmp/.X11-unix:ro \
+  -e DISPLAY=${DISPLAY} \
+  -u ebox \
+  petalinux:2024.1-$TAG
+```
+
 ----
 
 ```text
