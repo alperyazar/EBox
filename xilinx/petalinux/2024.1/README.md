@@ -37,5 +37,3 @@ PetaLinux Extensible SDK installer version 2024.1
 =================================================
 ERROR: The extensible sdk cannot be installed as root.
 ```
-
-
