@@ -26,13 +26,13 @@ To test:
 sudo docker run --rm -it --user ebox petalinux:2024.1-$TAG
 ```
 
-----
+---
 
 ```text
-root@e28d3bf120c1:~/xilinx-zc702-2024.1# petalinux-build 
+root@e28d3bf120c1:~/xilinx-zc702-2024.1# petalinux-build
 [INFO] Building project
 [INFO] Extracting yocto SDK to components/yocto. This may take time!
-[ERROR] 
+[ERROR]
 PetaLinux Extensible SDK installer version 2024.1
 =================================================
 ERROR: The extensible sdk cannot be installed as root.
