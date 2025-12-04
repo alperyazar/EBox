@@ -19,7 +19,7 @@ table accordingly.
 | Run Vivado, Vitis, Vitis Classic | ❓ | ✅ | ✅ | ✅ | Just open the tool(s) and close | `20250426-0` |
 | Vivado MicroBlaze Example Project | ❓ | ✅ | ❓ | ✅ | Create (classical) MicroBlaze example project for Artix-7 AC701 board with several IPs AXI GPIO, AXI I2C etc., finish to bitstream generation | `20250426-0` |
 | Vivado Zynq 7000 Example Project | ❓ | ❓ | ❓ | ✅ | Create Zynq 7000 example project for ZC-702 board with several IPs AXI GPIO, AXI I2C etc., finish to bitstream generation | `20250426-0` |
-| Vivado ZynqMP Project | ❓ | ✅ | ✅ | ❓ | Custom project, finish to bitstream generation| `20250426-0` |
+| Vivado ZynqMP Project | ❓ | ✅ | ✅ | ❓ | Custom project, finish to bitstream generation | `20250426-0` |
 
 - ✅: Tested and works well
 - ❓: Not tested yet
