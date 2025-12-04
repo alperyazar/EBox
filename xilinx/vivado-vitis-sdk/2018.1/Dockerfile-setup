@@ -1,0 +1,89 @@
+# ------------------------------------------------------------------------------
+# MIT License
+#
+# Copyright (c) 2025 The EBox Authors
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+# ------------------------------------------------------------------------------
+
+# ------------------------------------------------------------------------------
+# EBox https://github.com/alperyazar/EBox
+# ------------------------------------------------------------------------------
+
+# ------------------------------------------------------------------------------
+# Vivado/SDK 2018.1
+# ------------------------------------------------------------------------------
+
+# Stage 1: Installer
+# Offical: 16.04 but 18.04 looks fine
+FROM ubuntu:18.04 AS installer
+
+# Do the COPY and untar at the very top to maximize build cache
+# Copy the Vivado installer tar file into the container
+ARG VIVADO_INSTALLATION_FILE="Xilinx_Vivado_SDK_2018.1_0405_1.tar.gz"
+COPY $VIVADO_INSTALLATION_FILE /tmp/$VIVADO_INSTALLATION_FILE
+
+# Check if we should skip the MD5 comparison
+ARG MD5="30c5fc997b0271860329199fd02d57a6"
+ARG SKIP_MD5="0"
+RUN if [ "$SKIP_MD5" != "1" ]; then \
+        echo "Calculating MD5..." && \
+        file_md5=$(md5sum /tmp/$VIVADO_INSTALLATION_FILE | awk '{ print $1 }') && \
+        if [ "$file_md5" != "$MD5" ]; then \
+            echo "MD5 mismatch! Expected $MD5, got $file_md5. Build failed." && exit 1; \
+        else \
+            echo "MD5 matched: $file_md5"; \
+        fi; \
+    else \
+        echo "Skipping MD5 comparison."; \
+    fi
+
+# Extract Vivado
+RUN mkdir -p /tmp/installer && \
+    tar -xvzf /tmp/$VIVADO_INSTALLATION_FILE -C /tmp/installer --strip-components=1
+
+
+RUN mkdir -p /opt/EBox
+COPY sources-stage-1.list /opt/EBox/sources-stage-1.list
+COPY replace_sources.sh /opt/EBox/bin/replace_sources.sh
+RUN chmod +x /opt/EBox/bin/replace_sources.sh && \
+    /opt/EBox/bin/replace_sources.sh /opt/EBox/sources-stage-1.list
+
+# Install required packages to suppress warnings and possible problems during
+# install
+ENV DEBIAN_FRONTEND=noninteractive
+ARG COMMON_PACKAGES="\
+    locales \
+    libncurses5 \
+    xvfb \
+    libglib2.0-0 \
+    libxi6 \
+    libxtst6 \
+    libxrender1 \
+    libxrandr2 \
+    libfontconfig1"
+RUN apt update && apt install -y $COMMON_PACKAGES && \
+    echo $COMMON_PACKAGES > /opt/EBox/common_packages.txt
+
+# https://stackoverflow.com/a/28406007/1766391
+# Set the locale
+RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
