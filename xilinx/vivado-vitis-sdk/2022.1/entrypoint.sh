@@ -53,6 +53,7 @@ if [ -z "$USER_ID" ] || [ -z "$GROUP_ID" ]; then
     if [[ "$EBOX_MODIFY_PATH" != "false" ]]; then
         # Avoid duplicate bashrc entries
         grep -qxF 'source /opt/Xilinx/Vivado/2022.1/settings64.sh' "$HOME/.bashrc" || echo 'source /opt/Xilinx/Vivado/2022.1/settings64.sh' >> "$HOME/.bashrc"
+        grep -qxF 'source /opt/EBox/ebox.sh /opt/EBox/bin' "$HOME/.bashrc" || echo 'source /opt/EBox/ebox.sh /opt/EBox/bin' >> "$HOME/.bashrc"
     else
         echo "Skipping PATH modification"
     fi
@@ -84,6 +85,7 @@ HOME_DIR=$(getent passwd "$USER_ID" | cut -d: -f6)
 
 # Avoid duplicate bashrc entries
 grep -qxF 'source /opt/Xilinx/Vivado/2022.1/settings64.sh' "$HOME_DIR/.bashrc" || echo 'source /opt/Xilinx/Vivado/2022.1/settings64.sh' >> "$HOME_DIR/.bashrc"
+grep -qxF 'source /opt/EBox/ebox.sh /opt/EBox/bin' "$HOME_DIR/.bashrc" || echo 'source /opt/EBox/ebox.sh /opt/EBox/bin' >> "$HOME_DIR/.bashrc"
 
 # Setup workspace
 if [ ! -d "$WS_PATH" ]; then

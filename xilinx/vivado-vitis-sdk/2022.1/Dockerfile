@@ -66,18 +66,30 @@ RUN chmod +x /opt/EBox/bin/replace_sources.sh && \
     /opt/EBox/bin/replace_sources.sh /opt/EBox/sources-stage-1.list
 
 # Install required packages to suppress warnings and possible problems during
-# install
+# install and runtime
 ENV DEBIAN_FRONTEND=noninteractive
 ARG COMMON_PACKAGES="\
+    python3 \
     locales \
-    libncurses5 \
+    lsb-release \
+    xz-utils \
+    libc6-dev-i386 net-tools \
+    graphviz \
+    make \
+    unzip \
+    zip \
+    g++ \
+    libtinfo5 \
     xvfb \
-    libglib2.0-0 \
-    libxi6 \
-    libxtst6 \
-    libxrender1 \
-    libxrandr2 \
-    libfontconfig1"
+    git \
+    libncursesw5 \
+    libc6-dev-i386 \
+    openssl  \
+    ca-certificates \
+    libnss3-dev \
+    libgdk-pixbuf2.0-dev \
+    libgtk-3-dev \
+    libxss-dev"
 RUN apt update && apt install -y $COMMON_PACKAGES && \
     echo $COMMON_PACKAGES > /opt/EBox/common_packages.txt
 
@@ -94,7 +106,7 @@ COPY $VIVADO_BATCH_INSTALL_CONFIG_FILE /opt/EBox/install_config.txt
 # Install Vivado
 ENV TERM=xterm-256color
 RUN /tmp/installer/xsetup \
-    --agree XilinxEULA,3rdPartyEULA,WebTalkTerms \
+    --agree XilinxEULA,3rdPartyEULA \
     --batch Install \
     --config /opt/EBox/install_config.txt
 
@@ -121,12 +133,18 @@ ENV DEBIAN_FRONTEND=noninteractive
 # libgdk-pixbuf2.0-dev : libgdk-pixbuf2.0-dev
 # libgtk-3-dev : libgtk-3-dev
 # libxss-dev : libxss-dev
+# libcanberra-gtk-module: Vivado Gtk-Message: Failed to load module "canberra-gtk-module"
+# gnome-icon-theme: Solves Vitis can't open Create Platform GUI.
+# Problem: https://adaptivesupport.amd.com/s/question/0D52E00006hpPlESAU/create-new-platform-project-button-doesnt-work
+# Solution: https://adaptivesupport.amd.com/s/question/0D52E00006ypaI2SAI/vitis-platform-project-does-not-work-does-not-respond
 RUN apt update && apt install -y $(grep -vE '^\s*#|^\s*$' /opt/EBox/common_packages.txt | tr -d '\\') && apt install -y \
     libyaml-0-2 \
     libsecret-1-0 \
     rlwrap \
     x11-utils \
     libasound2 \
+    libcanberra-gtk-module \
+    gnome-icon-theme \
     sudo
 
 # https://stackoverflow.com/a/28406007/1766391
@@ -141,13 +159,19 @@ ENV LC_ALL=en_US.UTF-8
 # run the Xilinx's script again.
 RUN bash /opt/Xilinx/Vitis/2022.1/scripts/installLibs.sh
 
+
+# https://adaptivesupport.amd.com/s/question/0D54U00006lApRISA0/immediate-segfault-when-running-xsdb
+RUN mv /opt/Xilinx/Vitis/2022.1/bin/unwrapped/lnx64.o/rlwrap /opt/Xilinx/Vitis/2022.1/bin/unwrapped/lnx64.o/rlwrap.bak && \
+    ln -s `which rlwrap` /opt/Xilinx/Vitis/2022.1/bin/unwrapped/lnx64.o/rlwrap
+
 # Create a non-root user ebox with root (sudo) privileges
 RUN groupadd -g 888 ebox && \
     adduser --uid 888 --gid 888 --shell /bin/bash ebox && \
     adduser ebox sudo && \
     echo 'ebox ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers && \
     echo "ebox:ebox" | chpasswd && \
-    echo "source /opt/Xilinx/Vivado/2018.1/settings64.sh" >> "/home/ebox/.bashrc" && \
+    echo "source /opt/Xilinx/Vivado/2022.1/settings64.sh" >> "/home/ebox/.bashrc" && \
+    echo "source /opt/EBox/ebox.sh /opt/EBox/bin" >> "/home/ebox/.bashrc" && \
     chown ebox:ebox /home/ebox/.bashrc
 
 ARG EXTRA_PACKAGES="python3-dev python3-pip"
@@ -161,6 +185,14 @@ RUN apt update && apt install -y $CMD_EXTRA_PACKAGES
 RUN apt update && apt install -y gosu
 COPY entrypoint.sh /opt/EBox/entrypoint.sh
 RUN chmod +x /opt/EBox/entrypoint.sh
+
+# https://adaptivesupport.amd.com/s/article/000034450?language=en_US
+COPY ebox-vivado /opt/EBox/bin/vivado
+COPY ebox.sh /opt/EBox/ebox.sh
+RUN chmod +x /opt/EBox/bin/vivado && chmod +x /opt/EBox/ebox.sh
+
+# To suppress Vitis dbus warnings, no vital
+ENV NO_AT_BRIDGE=1
 
 COPY sources-final.list /opt/EBox/sources-final.list
 RUN /opt/EBox/bin/replace_sources.sh /opt/EBox/sources-final.list
