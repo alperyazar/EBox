@@ -172,8 +172,6 @@ RUN /tmp/$INSTALLATION_FILE \
 USER root
 WORKDIR /root
 
-RUN chmod -R a-w /opt/Xilinx/PetaLinux/2024.1
-
 # Save environment variables used during the build
 RUN printenv > /opt/EBox/env-stage-2
 
@@ -211,7 +209,7 @@ RUN /opt/EBox/bin/replace_sources.sh /opt/EBox/sources-final.list
 ARG EBOX_OCI_TITLE="EBox - PetaLinux 2024.1"
 ARG EBOX_OCI_DESCRIPTION="PetaLinux 2024.1 in a container, the EBox project"
 ARG EBOX_OCI_VERSION="19700101-0"
-ARG EBOX_OCI_REVISION="202511121-0"
+ARG EBOX_OCI_REVISION="20251211-DRAFT-0"
 ARG EBOX_OCI_LICENSE="MIT"
 ARG EBOX_OCI_AUTHORS="The EBox Authors"
 
