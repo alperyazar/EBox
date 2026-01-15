@@ -89,7 +89,6 @@ if ! id -nG "$USERNAME" | grep -qw "sudo"; then
         echo "$USERNAME is now 'sudo'"
     else
         echo "ERROR: Can't add to 'sudo'" >&2
-        exit 1
     fi
 else
     echo "$USERNAME is already 'sudo'"
