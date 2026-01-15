@@ -3,7 +3,7 @@
 # ------------------------------------------------------------------------------
 # MIT License
 #
-# Copyright (c) 2025 The EBox Authors
+# Copyright (c) 2025-2026 The EBox Authors
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -79,6 +79,20 @@ if ! id -u "$USER_ID" > /dev/null 2>&1; then
         echo "ERROR: Failed to create user with UID $USER_ID" >&2
         exit 1
     fi
+fi
+
+# Add user to group 'sudo'
+if ! id -nG "$USERNAME" | grep -qw "sudo"; then
+    echo "Adding $USERNAME to group 'sudo'..."
+    
+    if usermod -aG sudo "$USERNAME"; then
+        echo "$USERNAME is now 'sudo'"
+    else
+        echo "ERROR: Can't add to 'sudo'" >&2
+        exit 1
+    fi
+else
+    echo "$USERNAME is already 'sudo'"
 fi
 
 HOME_DIR=$(getent passwd "$USER_ID" | cut -d: -f6)
