@@ -1,7 +1,7 @@
 # ------------------------------------------------------------------------------
 # MIT License
 #
-# Copyright (c) 2025 The EBox Authors
+# Copyright (c) 2025-2026 The EBox Authors
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -167,13 +167,13 @@ RUN mv /opt/Xilinx/Vitis/2024.1/bin/unwrapped/lnx64.o/rlwrap /opt/Xilinx/Vitis/2
 RUN groupadd -g 888 ebox && \
     adduser --uid 888 --gid 888 --shell /bin/bash ebox && \
     adduser ebox sudo && \
-    echo 'ebox ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers && \
+    echo '%sudo ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/ebox_nopasswd_sudo && \
     echo "ebox:ebox" | chpasswd && \
     echo "source /opt/Xilinx/Vivado/2024.1/settings64.sh" >> "/home/ebox/.bashrc" && \
     echo "source /opt/EBox/ebox.sh /opt/EBox/bin" >> "/home/ebox/.bashrc" && \
     chown ebox:ebox /home/ebox/.bashrc
 
-ARG EXTRA_PACKAGES="python3-dev python3-pip"
+ARG EXTRA_PACKAGES="python3-dev python3-pip wget curl vim nano micro"
 RUN apt update && apt install -y $EXTRA_PACKAGES
 
 # Allow user to append extra packages via --build-arg
@@ -196,7 +196,7 @@ RUN /opt/EBox/bin/replace_sources.sh /opt/EBox/sources-final.list
 ARG EBOX_OCI_TITLE="EBox - Vivado Vitis 2024.1"
 ARG EBOX_OCI_DESCRIPTION="Vivado Vitis 2024.1 in a container, the EBox project"
 ARG EBOX_OCI_VERSION="19700101-0"
-ARG EBOX_OCI_REVISION="20250429-0"
+ARG EBOX_OCI_REVISION="20260115-0"
 ARG EBOX_OCI_LICENSE="MIT"
 ARG EBOX_OCI_AUTHORS="The EBox Authors"
 
@@ -221,4 +221,3 @@ USER root
 WORKDIR /root
 CMD [ "/bin/bash" ]
 ENTRYPOINT ["/opt/EBox/entrypoint.sh"]
-
