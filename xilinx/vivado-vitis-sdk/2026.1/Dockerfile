@@ -56,7 +56,7 @@ RUN if [ "$SKIP_MD5" != "1" ]; then \
 # Extract Vivado
 RUN mkdir -p /tmp/installer && \
     tar -xvf /tmp/$VIVADO_INSTALLATION_FILE -C /tmp/installer --strip-components=1
-  
+
 RUN mkdir -p /opt/EBox
 
 COPY sources-stage-1.list /opt/EBox/sources-stage-1.list
@@ -155,7 +155,7 @@ ENV LANG=en_US.UTF-8 \
     LC_ALL=en_US.UTF-8 \
     LANGUAGE=en_US:en \
     TZ=Etc/UTC
-    
+
 # Create a non-root user eboox with root (sudo) privileges
 RUN groupadd -g 888 ebox && \
     adduser --uid 888 --gid 888 --shell /bin/bash ebox && \
@@ -208,7 +208,7 @@ ENV EBOX_OCI_REVISION=${EBOX_OCI_REVISION}
 ENV EBOX_OCI_LICENSE=${EBOX_OCI_LICENSE}
 ENV EBOX_OCI_AUTHORS=${EBOX_OCI_AUTHORS}
 
-RUN printenv > /opt/EBox/env-stage-2 && \ 
+RUN printenv > /opt/EBox/env-stage-2 && \
     cat /opt/EBox/env-stage-1 /opt/EBox/env-stage-2 > /opt/EBox/env
 
 USER root
