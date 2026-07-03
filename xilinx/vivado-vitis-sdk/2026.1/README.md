@@ -88,14 +88,59 @@ Inside the container, run the installer:
 
 ## Building the image
 
+The Vivado installer tar lives in `./installer/` and is supplied as a *named
+build context* (`vivado_installer`) rather than the main build context. It is
+bind-mounted read-only during the install step, so it is never copied into an
+image layer and never re-transferred as part of the main context.
+
 ```bash
 # Define a version tag
 TAG=YYYYMMDD-<Count>  # Change this to match the current date and build count like 20260703-0
 
 # Build the Docker image with tagging and log output
 sudo docker build \
+  --build-context vivado_installer=./installer \
   -t vivado:2026.1-$TAG \
   --build-arg EBOX_OCI_VERSION="$TAG" \
   --progress=plain . \
   2>&1 | tee build.log
 ```
+
+Or, using Podman:
+
+```bash
+# Define a version tag
+TAG=YYYYMMDD-<Count>  # Change this to match the current date and build count like 20260703-0
+
+# Build the image with Podman
+podman build \
+  --build-context vivado_installer=./installer \
+  -t vivado:2026.1-$TAG \
+  --build-arg EBOX_OCI_VERSION="$TAG" \
+  --progress=plain . \
+  2>&1 | tee build.log
+```
+
+`--build-context` requires `docker buildx` (BuildKit, default in recent Docker)
+or `podman`/`buildah` >= 4.x.
+
+### Skipping the MD5 check
+
+By default the build verifies the installer tar against a known MD5 before
+extracting it, which reads all ~100 GB and adds noticeable time. If you have
+already verified the download yourself (or simply don't need the check during
+local development), skip it with `--build-arg SKIP_MD5=1`:
+
+```bash
+podman build \
+  --build-context vivado_installer=./installer \
+  --build-arg SKIP_MD5=1 \
+  -t vivado:2026.1-$TAG \
+  --build-arg EBOX_OCI_VERSION="$TAG" \
+  --progress=plain . \
+  2>&1 | tee build.log
+```
+
+The same `--build-arg SKIP_MD5=1` works with `docker build`. Leave the check
+enabled for release builds; the expected MD5 is the `MD5` build arg in the
+`Dockerfile`.

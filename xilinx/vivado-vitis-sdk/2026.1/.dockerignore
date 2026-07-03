@@ -1,2 +1,7 @@
+# The installer tar is passed via a named build context
+# (--build-context vivado_installer=./installer), not the main context.
+# Keep it out of the main context so it isn't transferred/tarred on every build.
+installer/
+
 build.log
 README.md

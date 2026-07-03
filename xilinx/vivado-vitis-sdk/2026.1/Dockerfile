@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # ------------------------------------------------------------------------------
 # MIT License
 #
@@ -29,47 +30,49 @@
 # ------------------------------------------------------------------------------
 # Vivado/Vitis 2026.1
 # ------------------------------------------------------------------------------
+#
+# Single-stage build.
+#
+# The ~100 GB Vivado installer tar is NOT part of the main build context and is
+# never COPYied into a layer. Instead it is supplied as a *named build context*
+# and bind-mounted read-only for the single RUN that extracts + installs it, so:
+#   * no 100 GB COPY layer is created,
+#   * the extracted installer tree never persists in a layer (removed in the
+#     same RUN), and
+#   * the main build context stays tiny, so it isn't re-transferred/re-tarred
+#     on every build.
+#
+# Build with (note the named context pointing at the dir that holds the tar):
+#
+#   docker build \
+#     --build-context vivado_installer=./installer \
+#     -t vivado:2026.1 .
+#
+# (Both `docker buildx` and `podman`/`buildah` >= 4.x support --build-context.)
 
-# Stage 1: Installer
-FROM ubuntu:24.04 AS installer
+FROM ubuntu:24.04
 
-# Do the COPY and untar at the very top to maximize build cache
-# Copy the Vivado installer tar file into the container
-ARG VIVADO_INSTALLATION_FILE="FPGAs_AdaptiveSoCs_Unified_SDI_2026.1_0616_1700.tar"
-COPY $VIVADO_INSTALLATION_FILE /tmp/$VIVADO_INSTALLATION_FILE
-
-# Check if we should skip the MD5 comparison
-ARG MD5="b577835d4304f07e40292c51a4018482"
-ARG SKIP_MD5="0"
-RUN if [ "$SKIP_MD5" != "1" ]; then \
-        echo "Calculating MD5..." && \
-        file_md5=$(md5sum /tmp/$VIVADO_INSTALLATION_FILE | awk '{ print $1 }') && \
-        if [ "$file_md5" != "$MD5" ]; then \
-            echo "MD5 mismatch! Expected $MD5, got $file_md5. Build failed." && exit 1; \
-        else \
-            echo "MD5 matched: $file_md5"; \
-        fi; \
-    else \
-        echo "Skipping MD5 comparison."; \
-    fi
-
-# Extract Vivado
-RUN mkdir -p /tmp/installer && \
-    tar -xvf /tmp/$VIVADO_INSTALLATION_FILE -C /tmp/installer --strip-components=1
-
+# ------------------------------------------------------------------------------
+# apt sources used *during the build*.
+# Override sources-build.list to point apt at a local mirror if needed; a file
+# whose first line starts with "#ignore" is treated as a no-op (keep defaults).
+# ------------------------------------------------------------------------------
 RUN mkdir -p /opt/EBox
-
-COPY sources-stage-1.list /opt/EBox/sources-stage-1.list
+COPY sources-build.list /opt/EBox/sources-build.list
 COPY replace_sources.sh /opt/EBox/bin/replace_sources.sh
 RUN chmod +x /opt/EBox/bin/replace_sources.sh && \
-    /opt/EBox/bin/replace_sources.sh /opt/EBox/sources-stage-1.list
+    /opt/EBox/bin/replace_sources.sh /opt/EBox/sources-build.list
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Most packages are from installLibs.sh from Vivado 2026.1 installation
+# Packages required to install Vivado/Vitis (mostly from installLibs.sh of the
+# Vivado 2026.1 installation). These are Vivado's own dependencies, so they are
+# also needed at runtime and remain in the final image. Keep this list to what
+# the installer/Vivado actually needs -- purely runtime conveniences belong in
+# RUNTIME_PACKAGES below so they don't invalidate the expensive install layer.
 # libtinfo5 and libncurses5 not avail in Ubuntu 24.04, try 6, replace libncurses5-dev with libncurses-dev
 # libasound2 -> libasound2t64 ref: https://github.com/cypress-io/cypress-documentation/issues/5816#issue-2268545713
-ARG COMMON_PACKAGES="\
+ARG INSTALL_PACKAGES="\
     python3 \
     locales \
     lsb-release \
@@ -98,13 +101,9 @@ ARG COMMON_PACKAGES="\
     libsecret-1-dev"
 
 RUN apt-get update && \
-    apt-get install -y $COMMON_PACKAGES && \
+    apt-get install -y $INSTALL_PACKAGES && \
     rm -rf /var/lib/apt/lists/* && \
-    echo $COMMON_PACKAGES > /opt/EBox/common_packages.txt
-
-# Create symlink for libtinfo5. Ubuntu 24.04 doesn't have libtinfo5 but 6
-# Ref: https://www.youtube.com/watch?v=mH7bfsOPVLk
-RUN ln -s /usr/lib/x86_64-linux-gnu/libtinfo.so.6 /usr/lib/x86_64-linux-gnu/libtinfo.so.5
+    echo $INSTALL_PACKAGES > /opt/EBox/install_packages.txt
 
 # https://stackoverflow.com/a/28406007/1766391
 # Set the locale
@@ -118,45 +117,62 @@ ENV LANG=en_US.UTF-8 \
 ARG VIVADO_BATCH_INSTALL_CONFIG_FILE="install_config.txt"
 COPY $VIVADO_BATCH_INSTALL_CONFIG_FILE /opt/EBox/install_config.txt
 
-# Install Vivado
-RUN /tmp/installer/xsetup \
-    --agree XilinxEULA,3rdPartyEULA \
-    --batch Install \
-    --config /opt/EBox/install_config.txt
-
-# Save environment variables used during the build
-RUN printenv > /opt/EBox/env-stage-1
+# ------------------------------------------------------------------------------
+# Install Vivado/Vitis.
+#
+# The installer tar is bind-mounted read-only from the `vivado_installer` named
+# build context (mounted as a directory so no build args appear in the --mount
+# line, which keeps it portable across docker/buildkit and buildah). MD5 is
+# verified on the mounted file, then it is extracted, installed, and the
+# extracted tree is removed -- all in one layer, so nothing huge is persisted.
+# ------------------------------------------------------------------------------
+ARG VIVADO_INSTALLATION_FILE="FPGAs_AdaptiveSoCs_Unified_SDI_2026.1_0616_1700.tar"
+ARG MD5="b577835d4304f07e40292c51a4018482"
+ARG SKIP_MD5="0"
+RUN --mount=type=bind,from=vivado_installer,target=/mnt/installer_ctx \
+    installer_tar="/mnt/installer_ctx/$VIVADO_INSTALLATION_FILE" && \
+    if [ "$SKIP_MD5" != "1" ]; then \
+        echo "Calculating MD5..." && \
+        file_md5=$(md5sum "$installer_tar" | awk '{ print $1 }') && \
+        if [ "$file_md5" != "$MD5" ]; then \
+            echo "MD5 mismatch! Expected $MD5, got $file_md5. Build failed." && exit 1; \
+        else \
+            echo "MD5 matched: $file_md5"; \
+        fi; \
+    else \
+        echo "Skipping MD5 comparison."; \
+    fi && \
+    mkdir -p /tmp/installer && \
+    tar --no-same-owner -xf "$installer_tar" -C /tmp/installer --strip-components=1 && \
+    /tmp/installer/xsetup \
+        --agree XilinxEULA,3rdPartyEULA \
+        --batch Install \
+        --config /opt/EBox/install_config.txt && \
+    rm -rf /tmp/installer
 
 # ------------------------------------------------------------------------------
-################# Beginning of the final image ##################
+# Everything below is runtime setup for the delivered image. It is placed after
+# the (expensive, rarely-changing) Vivado install so editing it doesn't
+# invalidate the install layer's cache.
 # ------------------------------------------------------------------------------
 
-# Stage 2: Final
-FROM ubuntu:24.04
+# Create symlink for libtinfo5. Ubuntu 24.04 doesn't have libtinfo5 but 6.
+# Needed by Vivado at runtime (not by the installer).
+# Ref: https://www.youtube.com/watch?v=mH7bfsOPVLk
+RUN ln -s /usr/lib/x86_64-linux-gnu/libtinfo.so.6 /usr/lib/x86_64-linux-gnu/libtinfo.so.5
 
-COPY --from=installer /opt/Xilinx /opt/Xilinx
-COPY --from=installer /opt/EBox /opt/EBox
-
-COPY sources-stage-2.list /opt/EBox/sources-stage-2.list
-RUN /opt/EBox/bin/replace_sources.sh /opt/EBox/sources-stage-2.list
-
-ENV DEBIAN_FRONTEND=noninteractive
-
-RUN apt-get update && apt install -y $(grep -vE '^\s*#|^\s*$' /opt/EBox/common_packages.txt | tr -d '\\') && apt-get install -y \
+# Packages needed only at container runtime, not during the Vivado install.
+# Kept separate from INSTALL_PACKAGES and installed *after* the install step so
+# that adding a runtime package does not invalidate the expensive install layer.
+ARG RUNTIME_PACKAGES="\
     x11-utils \
-    sudo && \
-    rm -rf /var/lib/apt/lists/*
+    sudo"
+RUN apt-get update && \
+    apt-get install -y $RUNTIME_PACKAGES && \
+    rm -rf /var/lib/apt/lists/* && \
+    echo $RUNTIME_PACKAGES > /opt/EBox/runtime_packages.txt
 
-# https://stackoverflow.com/a/28406007/1766391
-# Set the locale
-RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
-
-ENV LANG=en_US.UTF-8 \
-    LC_ALL=en_US.UTF-8 \
-    LANGUAGE=en_US:en \
-    TZ=Etc/UTC
-
-# Create a non-root user eboox with root (sudo) privileges
+# Create a non-root user ebox with root (sudo) privileges
 RUN groupadd -g 888 ebox && \
     adduser --uid 888 --gid 888 --shell /bin/bash ebox && \
     adduser ebox sudo && \
@@ -183,6 +199,11 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && \
     chmod +x /opt/EBox/entrypoint.sh
 
+# ------------------------------------------------------------------------------
+# Finalize apt sources for the delivered image (what the end user's apt will
+# use). This is the last apt-affecting step, so no packages are installed after
+# it. Override sources-final.list the same way as sources-build.list.
+# ------------------------------------------------------------------------------
 COPY sources-final.list /opt/EBox/sources-final.list
 RUN /opt/EBox/bin/replace_sources.sh /opt/EBox/sources-final.list
 
@@ -208,11 +229,10 @@ ENV EBOX_OCI_REVISION=${EBOX_OCI_REVISION}
 ENV EBOX_OCI_LICENSE=${EBOX_OCI_LICENSE}
 ENV EBOX_OCI_AUTHORS=${EBOX_OCI_AUTHORS}
 
-RUN printenv > /opt/EBox/env-stage-2 && \
-    cat /opt/EBox/env-stage-1 /opt/EBox/env-stage-2 > /opt/EBox/env
+# Save environment variables used during the build
+RUN printenv > /opt/EBox/env
 
 USER root
 WORKDIR /root
 CMD [ "/bin/bash" ]
 ENTRYPOINT ["/opt/EBox/entrypoint.sh"]
-
