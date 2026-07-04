@@ -27,11 +27,10 @@
 # ------------------------------------------------------------------------------
 
 # ------------------------------------------------------------------------------
-# Vivado/Vitis 2026.1
+# Vivado/Vitis 2026.1 Installer Viewer
 # ------------------------------------------------------------------------------
 
-# Stage 1: Installer
-FROM ubuntu:24.04 AS installer
+FROM ubuntu:24.04
 
 # Do the COPY and untar at the very top to maximize build cache
 # Copy the Vivado installer tar file into the container
@@ -56,7 +55,7 @@ RUN if [ "$SKIP_MD5" != "1" ]; then \
 # Extract Vivado
 RUN mkdir -p /tmp/installer && \
     tar -xvf /tmp/$VIVADO_INSTALLATION_FILE -C /tmp/installer --strip-components=1
-  
+
 RUN mkdir -p /opt/EBox
 
 COPY sources-stage-1.list /opt/EBox/sources-stage-1.list

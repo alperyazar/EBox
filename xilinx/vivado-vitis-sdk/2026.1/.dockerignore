@@ -3,5 +3,7 @@
 # Keep it out of the main context so it isn't transferred/tarred on every build.
 installer/
 
-build.log
-README.md
+assets/
+*.log
+*.lic
+*.md

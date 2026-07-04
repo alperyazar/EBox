@@ -24,7 +24,7 @@
 # SOFTWARE.
 # ------------------------------------------------------------------------------
 
-set -euo pipefail
+set -e
 
 # --------------------------------------------------------------------
 # Entry point for Vivado/Vitis container (Docker & Podman compatible)
@@ -52,7 +52,7 @@ if [ -z "$USER_ID" ] || [ -z "$GROUP_ID" ]; then
 
     if [[ "$EBOX_MODIFY_PATH" != "false" ]]; then
         # Avoid duplicate bashrc entries
-        grep -qxF 'source /opt/Xilinx/Vivado/2026.1/settings64.sh' "$HOME/.bashrc" || echo 'source /opt/Xilinx/Vivado/2026.1/settings64.sh' >> "$HOME/.bashrc"
+        grep -qxF 'source /opt/Xilinx/2026.1/Vivado/settings64.sh' "$HOME/.bashrc" || echo 'source /opt/Xilinx/2026.1/Vivado/settings64.sh' >> "$HOME/.bashrc"
         grep -qxF 'source /opt/EBox/ebox.sh /opt/EBox/bin' "$HOME/.bashrc" || echo 'source /opt/EBox/ebox.sh /opt/EBox/bin' >> "$HOME/.bashrc"
     else
         echo "Skipping PATH modification"
@@ -84,7 +84,7 @@ fi
 # Add user to group 'sudo'
 if ! id -nG "$USERNAME" | grep -qw "sudo"; then
     echo "Adding $USERNAME to group 'sudo'..."
-    
+
     if usermod -aG sudo "$USERNAME"; then
         echo "$USERNAME is now 'sudo'"
     else
@@ -97,7 +97,7 @@ fi
 HOME_DIR=$(getent passwd "$USER_ID" | cut -d: -f6)
 
 # Avoid duplicate bashrc entries
-grep -qxF 'source /opt/Xilinx/Vivado/2026.1/settings64.sh' "$HOME_DIR/.bashrc" || echo 'source /opt/Xilinx/Vivado/2026.1/settings64.sh' >> "$HOME_DIR/.bashrc"
+grep -qxF 'source /opt/Xilinx/2026.1/Vivado/settings64.sh' "$HOME_DIR/.bashrc" || echo 'source /opt/Xilinx/2026.1/Vivado/settings64.sh' >> "$HOME_DIR/.bashrc"
 grep -qxF 'source /opt/EBox/ebox.sh /opt/EBox/bin' "$HOME_DIR/.bashrc" || echo 'source /opt/EBox/ebox.sh /opt/EBox/bin' >> "$HOME_DIR/.bashrc"
 
 # Setup workspace
