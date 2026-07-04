@@ -4,6 +4,8 @@
 various platforms, FPGAs and processor architectures), BUT this needs more time
 to be declared *stable* or *battle-proven*. ❗
 
+Base image: **Ubuntu 24.04**
+
 ## Screenshots
 
 Vivado and Vitis working in a container:
