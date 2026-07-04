@@ -1,16 +1,24 @@
 # Vivado, Vitis 2026.1
 
-**❗ WIP (Work In Progress) ❗**
+❗ It looks like the container is working (I tested both Vivado and Vitis for
+various platforms, FPGAs and processor architectures), BUT this needs more time
+to be declared *stable* or *battle-proven*. ❗
 
-It looks like the container is working (I tested both Vivado and Vitis fo
-various platforms, FPGAs and processor architectures) BUT this needs more time
-to be declared as *stable* or *battle-proven*.
+## Screenshots
+
+![Vivado 2026.1 EBOX SS](assets/vivado-2026-1-ebox-4.png)
+
+![Vivado 2026.1 EBOX SS](assets/vivado-2026-1-ebox-1.png)
+
+![Vivado 2026.1 EBOX SS](assets/vivado-2026-1-ebox-2.png)
+
+![Vivado 2026.1 EBOX SS](assets/vivado-2026-1-ebox-3.png)
 
 ## License
 
-⚠️ Unlike previous versions Vivado 2026.1 requires at least BASIC license to
-open. You are required to obtain a license from (free for BASIC for now)
-Xilinx and put it in container. I will add details later.
+⚠️ Unlike previous versions, Vivado 2026.1 requires at least a BASIC license to
+open. You are required to obtain a license from Xilinx (free for BASIC for now)
+and put it in the container. I will add details later.
 
 You can't even open Vivado if you don't have a license!
 
@@ -18,9 +26,9 @@ You can't even open Vivado if you don't have a license!
 
 ## Generating `install_config.txt`
 
-**You can skip this step if you prefer edit the provided `install_config.txt`
-manually which can be done any text editor.** If you want component `x` after
-installation, just make sure that `x:1` in the config file.
+**You can skip this step if you prefer to edit the provided `install_config.txt`
+manually, which can be done with any text editor.** If you want component `x`
+after installation, just make sure that `x:1` is set in the config file.
 
 ---
 
@@ -43,14 +51,12 @@ sudo docker run --rm -it vivado:2026.1-setup
 
 Once inside the container, run:
 
-This will launch the batch mode installer and generate the `install_config.txt`
-file. You should see a prompt similar to the following:
-
 ```bash
 /tmp/installer/xsetup -b ConfigGen
 ```
 
-Example output:
+This will launch the batch mode installer and generate the `install_config.txt`
+file. You should see output similar to the following:
 
 ```text
 root@7d6aa5397666:/# /tmp/installer/xsetup -b ConfigGen
@@ -87,8 +93,8 @@ INFO  - Config file available at /root/.Xilinx/install_config.txt. Please use -c
 
 ### Opening the Install GUI
 
-GUI can't be used to generate `install_config.txt` but can be used to estimate
-final size.
+The GUI can't be used to generate `install_config.txt`, but it can be used to
+estimate the final size.
 
 First, allow Docker to access your X server:
 
@@ -113,19 +119,19 @@ Inside the container, run the installer:
 
 ## Building the image
 
-⚠️ It is recommended to have around 300 GB free space before building the image,
-depending on which components are enabled, i.e., which families of FPGAs/SoCs
-will be included in the install. The final image will be between 100-150 GB but
-build process needs additional temporary space, this is why you need more space.
-Temporary files will be automatically removed by Docker/Podman after build.
-Also build process does lots of IOPS, so if your build time will heavily
-affected by your disk: SSD vs HDD.
+⚠️ It is recommended to have around 300 GB of free space before building the
+image, depending on which components are enabled, i.e., which families of
+FPGAs/SoCs will be included in the install. The final image will be between
+100–150 GB, but the build process needs additional temporary space, which is why
+you need more. Temporary files are automatically removed by Docker/Podman after
+the build. The build process is also very I/O-intensive (high IOPS), so build
+time is heavily affected by your disk type (SSD vs HDD).
 
-First, download **SFD** installer from AMD:
+First, download the **SFD** (Single File Download) installer from AMD:
 
 <https://account.amd.com/en/forms/downloads/xef.html?filename=FPGAs_AdaptiveSoCs_Unified_SDI_2026.1_0616_1700.tar>
 
-You need to accept EULA. The size is around 100 GB.
+You need to accept the EULA. The size is around 100 GB.
 
 Now create a directory `installer` and put
 `FPGAs_AdaptiveSoCs_Unified_SDI_2026.1_0616_1700.tar` there.
@@ -139,14 +145,11 @@ image layer and never re-transferred as part of the main context.
 
 ---
 
-The single `Dockerfile` above rebuilds everything in one shot (good for a clean
-release build). For **local iteration**, the ~150 GB Vivado install dominates,
-and relying on layer cache to skip it is fragile — in particular a `RUN
---mount` step that bind-mounts a named build context does not reliably produce a
-cache hit in Buildah, so an unrelated edit (e.g. to `entrypoint.sh`) can trigger
-a full re-install that takes hours.
-
-To avoid that, the build is also provided split into two files:
+Because the ~150 GB Vivado install dominates the build, relying on layer cache
+to skip it is fragile — in particular, a `RUN --mount` step that bind-mounts a
+named build context does not reliably produce a cache hit in Buildah, so an
+unrelated edit (e.g. to `entrypoint.sh`) can trigger a full re-install that takes
+hours. To avoid that, the build is split into two files:
 
 - **`Dockerfile.base`** — the expensive half (install deps + the Vivado
   install). Build it **once** and tag it.
@@ -155,8 +158,8 @@ To avoid that, the build is also provided split into two files:
   re-runs the install — a `FROM` on a tagged image is reused deterministically,
   no cache heuristics or mounts involved.
 
-Build the base once (rebuild only when the installer or install deps change),
-this will take some time...:
+Build the base once (rebuild only when the installer or install deps change) —
+this will take a while:
 
 ```bash
 # Define a version tag
@@ -181,7 +184,7 @@ sudo docker build -f Dockerfile.app \
   2>&1 | tee build-app.log
 ```
 
-For Podman just replace `docker build` with `podman build`
+For Podman, just replace `docker build` with `podman build`.
 
 `--build-context` requires `docker buildx` (BuildKit, default in recent Docker)
 or `podman`/`buildah` >= 4.x.
@@ -191,16 +194,16 @@ or `podman`/`buildah` >= 4.x.
 By default the build verifies the installer tar against a known MD5 before
 extracting it, which reads all ~100 GB and adds noticeable time. If you have
 already verified the download yourself (or simply don't need the check during
-local development), skip it with `--build-arg SKIP_MD5=1`.
+local development), skip it with `--build-arg SKIP_MD5=1` on the base build.
 
 ## Using the image
 
-Details given in [Vivado 2024.1 README](../2024.1/README.md). Steps are the
-same.
+Details are given in the [Vivado 2024.1 README](../2024.1/README.md). The steps
+are the same.
 
 For Docker:
 
-First allow X11 access for GUI
+First, allow X11 access for the GUI:
 
 ```bash
 xhost +local:docker
