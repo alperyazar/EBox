@@ -1,0 +1,177 @@
+# syntax=docker/dockerfile:1
+# ------------------------------------------------------------------------------
+# MIT License
+#
+# Copyright (c) 2026 The EBox Authors
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+# ------------------------------------------------------------------------------
+
+# ------------------------------------------------------------------------------
+# EBox https://github.com/alperyazar/EBox
+# ------------------------------------------------------------------------------
+
+# ------------------------------------------------------------------------------
+# Vivado/Vitis 2026.1 -- BASE image (heavy, build-once)
+# ------------------------------------------------------------------------------
+#
+# This is the expensive half: install-time deps + the ~150 GB Vivado/Vitis
+# install. Build it ONCE and tag it; the light runtime layer lives in
+# Dockerfile.app which does `FROM` this image. That way editing entrypoint.sh,
+# packages, labels, etc. never re-runs this install -- a `FROM` on a tagged
+# image is reused deterministically, unlike intermediate-layer cache (which is
+# fragile for a RUN that bind-mounts a named build context).
+#
+# The ~100 GB installer tar is supplied as a *named build context* and
+# bind-mounted read-only for the single install RUN, so it is never COPYied into
+# a layer and never re-transferred as part of the main context.
+#
+# Build once (rebuild only when the installer or install deps change):
+#
+#   podman build -f Dockerfile.base \
+#     --build-context vivado_installer=./installer \
+#     -t localhost/vivado-base:2026.1 .
+#
+# (Both `docker buildx` and `podman`/`buildah` >= 4.x support --build-context.)
+
+FROM ubuntu:24.04
+
+# ------------------------------------------------------------------------------
+# apt sources used *during the build*.
+# Override sources-build.list to point apt at a local mirror if needed; a file
+# whose first line starts with "#ignore" is treated as a no-op (keep defaults).
+# ------------------------------------------------------------------------------
+RUN mkdir -p /opt/EBox
+COPY sources-build.list /opt/EBox/sources-build.list
+COPY replace_sources.sh /opt/EBox/bin/replace_sources.sh
+RUN chmod +x /opt/EBox/bin/replace_sources.sh && \
+    /opt/EBox/bin/replace_sources.sh /opt/EBox/sources-build.list
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Packages required to install Vivado/Vitis (mostly from installLibs.sh of the
+# Vivado 2026.1 installation). These are Vivado's own dependencies, so they are
+# also needed at runtime and remain in the final image. Keep this list to what
+# the installer/Vivado actually needs -- purely runtime conveniences belong in
+# RUNTIME_PACKAGES (Dockerfile.app) so they don't rebuild this base.
+# libtinfo5 and libncurses5 not avail in Ubuntu 24.04, try 6, replace libncurses5-dev with libncurses-dev
+# libasound2 -> libasound2t64 ref: https://github.com/cypress-io/cypress-documentation/issues/5816#issue-2268545713
+ARG INSTALL_PACKAGES="\
+    python3 \
+    locales \
+    lsb-release \
+    xz-utils \
+    libc6-dev-i386 net-tools \
+    graphviz \
+    make \
+    unzip \
+    zip \
+    g++ \
+    libtinfo6 \
+    xvfb \
+    git \
+    libtool \
+    libyaml-dev \
+    libncurses6 \
+    libncurses-dev \
+    libc6-dev-i386 \
+    libnss3-dev \
+    libgdk-pixbuf2.0-dev \
+    libgtk-3-dev \
+    libxss-dev \
+    libasound2t64 \
+    openssl  \
+    fdisk \
+    libsecret-1-dev"
+
+RUN apt-get update && \
+    apt-get install -y $INSTALL_PACKAGES && \
+    rm -rf /var/lib/apt/lists/* && \
+    echo $INSTALL_PACKAGES > /opt/EBox/install_packages.txt
+
+# https://stackoverflow.com/a/28406007/1766391
+# Set the locale
+RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
+
+ENV LANG=en_US.UTF-8 \
+    LC_ALL=en_US.UTF-8 \
+    LANGUAGE=en_US:en \
+    TZ=Etc/UTC
+
+ARG VIVADO_BATCH_INSTALL_CONFIG_FILE="install_config.txt"
+COPY $VIVADO_BATCH_INSTALL_CONFIG_FILE /opt/EBox/install_config.txt
+
+# ------------------------------------------------------------------------------
+# Install Vivado/Vitis.
+#
+# The installer tar is bind-mounted read-only from the `vivado_installer` named
+# build context (mounted as a directory so no build args appear in the --mount
+# line, which keeps it portable across docker/buildkit and buildah). MD5 is
+# verified on the mounted file, then it is extracted, installed, and the
+# extracted tree is removed -- all in one layer, so nothing huge is persisted.
+# ------------------------------------------------------------------------------
+ARG VIVADO_INSTALLATION_FILE="FPGAs_AdaptiveSoCs_Unified_SDI_2026.1_0616_1700.tar"
+ARG MD5="b577835d4304f07e40292c51a4018482"
+ARG SKIP_MD5="0"
+RUN --mount=type=bind,from=vivado_installer,target=/mnt/installer_ctx \
+    installer_tar="/mnt/installer_ctx/$VIVADO_INSTALLATION_FILE" && \
+    if [ "$SKIP_MD5" != "1" ]; then \
+        echo "Calculating MD5..." && \
+        file_md5=$(md5sum "$installer_tar" | awk '{ print $1 }') && \
+        if [ "$file_md5" != "$MD5" ]; then \
+            echo "MD5 mismatch! Expected $MD5, got $file_md5. Build failed." && exit 1; \
+        else \
+            echo "MD5 matched: $file_md5"; \
+        fi; \
+    else \
+        echo "Skipping MD5 comparison."; \
+    fi && \
+    mkdir -p /tmp/installer && \
+    tar --no-same-owner -xf "$installer_tar" -C /tmp/installer --strip-components=1 && \
+    /tmp/installer/xsetup \
+        --agree XilinxEULA,3rdPartyEULA \
+        --batch Install \
+        --config /opt/EBox/install_config.txt && \
+    rm -rf /tmp/installer
+
+
+ARG EBOX_OCI_TITLE="EBox - Vivado Vitis 2026.1 BASE IMAGE"
+ARG EBOX_OCI_DESCRIPTION="Vivado Vitis 2026.1 in a container, the EBox project BASE IMAGE"
+ARG EBOX_OCI_VERSION="19700101-0"
+ARG EBOX_OCI_REVISION="20260704-0"
+ARG EBOX_OCI_LICENSE="MIT"
+ARG EBOX_OCI_AUTHORS="The EBox Authors"
+
+LABEL org.opencontainers.image.title="${EBOX_OCI_TITLE}" \
+  org.opencontainers.image.description="${EBOX_OCI_DESCRIPTION}" \
+  org.opencontainers.image.version="${EBOX_OCI_VERSION}" \
+  org.opencontainers.image.revision="${EBOX_OCI_REVISION}" \
+  org.opencontainers.image.licenses="${EBOX_OCI_LICENSE}" \
+  org.opencontainers.image.authors="${EBOX_OCI_AUTHORS}" \
+  org.opencontainers.image.ref.name="ebox-xilinx-vivado-2026-1-base"
+
+ENV EBOX_OCI_TITLE=${EBOX_OCI_TITLE}
+ENV EBOX_OCI_DESCRIPTION=${EBOX_OCI_DESCRIPTION}
+ENV EBOX_OCI_VERSION=${EBOX_OCI_VERSION}
+ENV EBOX_OCI_REVISION=${EBOX_OCI_REVISION}
+ENV EBOX_OCI_LICENSE=${EBOX_OCI_LICENSE}
+ENV EBOX_OCI_AUTHORS=${EBOX_OCI_AUTHORS}
+
+# Save environment variables used during the build
+RUN printenv > /opt/EBox/env-base
