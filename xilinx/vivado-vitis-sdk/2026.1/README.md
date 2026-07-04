@@ -6,6 +6,8 @@ to be declared *stable* or *battle-proven*. ❗
 
 ## Screenshots
 
+Vivado and Vitis working in a container:
+
 ![Vivado 2026.1 EBOX SS](assets/vivado-2026-1-ebox-4.png)
 
 ![Vivado 2026.1 EBOX SS](assets/vivado-2026-1-ebox-1.png)
@@ -17,8 +19,8 @@ to be declared *stable* or *battle-proven*. ❗
 ## License
 
 ⚠️ Unlike previous versions, Vivado 2026.1 requires at least a BASIC license to
-open. You are required to obtain a license from Xilinx (free for BASIC for now)
-and put it in the container. I will add details later.
+open. You are required to obtain a license from AMD (Xilinx) (free for BASIC for
+now) and put it in the container. I will add details later.
 
 You can't even open Vivado if you don't have a license!
 
