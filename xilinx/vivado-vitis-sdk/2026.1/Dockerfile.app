@@ -96,7 +96,14 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && \
     chmod +x /opt/EBox/entrypoint.sh
 
-# https://adaptivesupport.amd.com/s/article/000034450?language=en_US
+# Modify vivado entry, otherwise get errors like:
+# ...
+# /opt/Xilinx/2026.1/Vivado/bin/unwrapped/lnx64.o/vivado(main+0x28) [0x401188]
+# /lib/x86_64-linux-gnu/libc.so.6(+0x2a1ca) [0x7f08912181ca]
+# /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x8b) [0x7f089121828b]
+# /opt/Xilinx/2026.1/Vivado/bin/unwrapped/lnx64.o/vivado() [0x4011fe]
+#
+# Ref:https://adaptivesupport.amd.com/s/article/000034450?language=en_US
 COPY ebox-vivado /opt/EBox/bin/vivado
 COPY ebox.sh /opt/EBox/ebox.sh
 RUN chmod +x /opt/EBox/bin/vivado && chmod +x /opt/EBox/ebox.sh
